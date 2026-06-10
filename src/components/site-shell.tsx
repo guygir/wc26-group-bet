@@ -35,11 +35,11 @@ export function SiteShell({ children, profile }: SiteShellProps) {
         />
         <div className="absolute inset-0 bg-emerald-50/45" />
         <Image
-          src="/brand/battalion-240-emblem-transparent.png"
+          src="/brand/battalion-240-emblem-dark.png"
           alt=""
           width={1024}
           height={1024}
-          className="absolute left-3 top-24 w-32 opacity-50 sm:left-8 sm:top-24 sm:w-44 lg:left-10 lg:w-56"
+          className="absolute left-3 top-24 w-32 opacity-100 mix-blend-screen sm:left-8 sm:top-24 sm:w-44 lg:left-10 lg:w-56"
         />
         <Image
           src="/brand/wc26-emblem-orange.png"
