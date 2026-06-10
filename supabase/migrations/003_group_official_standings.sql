@@ -12,3 +12,4 @@ CREATE TRIGGER group_official_standings_updated_at
   EXECUTE FUNCTION public.set_updated_at();
 
 ALTER TABLE public.group_official_standings ENABLE ROW LEVEL SECURITY;
+-- Check --
