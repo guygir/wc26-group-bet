@@ -35,7 +35,7 @@ export function SiteShell({ children, profile }: SiteShellProps) {
         />
         <div className="absolute inset-0 bg-emerald-50/45" />
         <Image
-          src="/brand/battalion-240-emblem-dark.png"
+          src="/brand/battalion-240-emblem-sharp-v2.png"
           alt=""
           width={1024}
           height={1024}
