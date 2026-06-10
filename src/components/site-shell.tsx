@@ -38,7 +38,7 @@ export function SiteShell({ children, profile }: SiteShellProps) {
           alt=""
           width={1024}
           height={1024}
-          className="absolute left-3 top-24 w-32 opacity-100 sm:left-8 sm:top-24 sm:w-44 lg:left-10 lg:w-56"
+          className="absolute left-[-0.5rem] top-24 w-32 opacity-100 sm:left-4 sm:top-24 sm:w-44 lg:left-6 lg:w-56"
         />
         <Image
           src="/brand/wc26-emblem-orange.png"

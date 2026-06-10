@@ -23,12 +23,11 @@ const dictionaries = {
     },
     home: {
       eyebrow: "World Cup 2026",
-      title: "Predict the groups. Beat your friends.",
-      body:
-        "A lightweight pool for score bets and group standings. Sign up with a name and password, make your picks, and watch the leaderboard move as scores are entered.",
-      matchCta: "Bet match scores",
-      groupCta: "Rank groups",
-      standingsCta: "Group tables",
+      title: "Group-stage picks",
+      body: "Battalion 240",
+      matchCta: "Games",
+      groupCta: "Groups",
+      standingsCta: "Leaderboard",
       stats: {
         groupMatches: "Group matches",
         finalScores: "Final scores",
@@ -209,11 +208,11 @@ const dictionaries = {
     },
     home: {
       eyebrow: "מונדיאל 2026",
-      title: "מנחשים את הבתים. מנצחים את החברים.",
-      body: "אתר קליל להימורי תוצאות ודירוגי בתים. נרשמים עם שם וסיסמה, ממלאים ניחושים, ורואים את הטבלה מתעדכנת אחרי הזנת התוצאות.",
-      matchCta: "הימורי תוצאות",
-      groupCta: "דירוג בתים",
-      standingsCta: "טבלאות בתים",
+      title: "ניחושי שלב הבתים",
+      body: "גדוד 240",
+      matchCta: "משחקים",
+      groupCta: "בתים",
+      standingsCta: "טבלה",
       stats: {
         groupMatches: "משחקי בתים",
         finalScores: "תוצאות סופיות",

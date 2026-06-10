@@ -44,6 +44,9 @@ export default async function Home() {
           <CtaLink href="/groups" subtle>
             {t.home.groupCta}
           </CtaLink>
+          <CtaLink href="/leaderboard" subtle>
+            {t.home.standingsCta}
+          </CtaLink>
         </div>
       </section>
 
