@@ -23,14 +23,14 @@ export function SiteShell({ children, profile }: SiteShellProps) {
   ];
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,#bbf7d0,transparent_34%),linear-gradient(135deg,#f8fafc,#ecfdf5)] text-slate-950">
+    <div className="relative min-h-screen overflow-x-hidden bg-slate-50 text-slate-950">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <Image
           src="/brand/battalion-240-banner.png"
           alt=""
           fill
           priority
-          className="object-cover opacity-[0.2]"
+          className="object-cover opacity-[0.7]"
           sizes="100vw"
         />
         <Image
