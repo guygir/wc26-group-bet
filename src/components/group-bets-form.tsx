@@ -171,7 +171,7 @@ export function GroupBetsForm({
                 </div>
 
                 <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 sm:p-4">
-                  <p className="mb-3 text-center text-sm font-black text-slate-800">{t.groups.yourBet}</p>
+                  <p className="mb-3 text-center text-sm font-black text-emerald-800">{t.groups.yourBet}</p>
                   <GroupSortableList
                     groupCode={group}
                     teams={teams}

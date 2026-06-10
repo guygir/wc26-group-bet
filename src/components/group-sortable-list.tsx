@@ -1,80 +1,83 @@
 "use client";
 
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  type DragEndEvent,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
-  GroupTeamRowContent,
-  groupRowClassName,
-} from "@/components/group-team-row";
+import { GroupTeamRowContent, groupRowClassName } from "@/components/group-team-row";
 import type { Team } from "@/lib/types";
 
-function dndContextId(groupCode: string) {
-  return `group-${groupCode.replace(/\s+/g, "-").toLowerCase()}`;
+function moveItem(order: string[], from: number, to: number) {
+  const next = [...order];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
 }
 
-function SortableTeamRow({
+function TeamOrderButtons({
+  index,
+  count,
+  locked,
+  onMove,
+}: {
+  index: number;
+  count: number;
+  locked: boolean;
+  onMove: (nextIndex: number) => void;
+}) {
+  return (
+    <span className="flex items-center justify-center gap-1">
+      <button
+        type="button"
+        disabled={locked || index === 0}
+        onClick={() => onMove(index - 1)}
+        className="grid size-7 place-items-center rounded-full bg-white text-sm font-black text-slate-700 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label="Move up"
+      >
+        ↑
+      </button>
+      <button
+        type="button"
+        disabled={locked || index === count - 1}
+        onClick={() => onMove(index + 1)}
+        className="grid size-7 place-items-center rounded-full bg-white text-sm font-black text-slate-700 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-35"
+        aria-label="Move down"
+      >
+        ↓
+      </button>
+    </span>
+  );
+}
+
+function TeamOrderRow({
   team,
   index,
   locked,
   placement,
+  count,
+  onMove,
 }: {
   team: Team;
   index: number;
   locked: boolean;
   placement: "correct" | "incorrect";
+  count: number;
+  onMove: (nextIndex: number) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: team.id,
-    disabled: locked,
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.85 : 1,
-  };
+  const visiblePlacement = locked ? placement : undefined;
+  const rowVariant = locked ? placement : "bet-open";
 
   return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className={groupRowClassName(placement, !locked)}
-      {...attributes}
-      {...listeners}
-    >
+    <li className={groupRowClassName(rowVariant)}>
       <GroupTeamRowContent
         team={team}
         index={index}
-        placement={placement}
-        rowVariant={placement}
+        placement={visiblePlacement}
+        rowVariant={rowVariant}
         betSide
-        dragHandle={
-          <span className="text-center text-xs font-bold text-slate-500" aria-hidden={locked}>
-            {!locked ? "⋮⋮" : ""}
-          </span>
-        }
+        dragHandle={<TeamOrderButtons index={index} count={count} locked={locked} onMove={onMove} />}
       />
     </li>
   );
 }
 
 export function GroupSortableList({
-  groupCode,
   teams,
   order,
   actualOrder,
@@ -89,12 +92,6 @@ export function GroupSortableList({
   onReorder: (nextOrder: string[]) => void;
 }) {
   const isLocked = locked ?? false;
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
   const teamById = new Map(teams.map((team) => [team.id, team]));
   const orderedTeams = order.map((id) => teamById.get(id)).filter(Boolean) as Team[];
 
@@ -104,35 +101,24 @@ export function GroupSortableList({
     return actualId === teamId ? "correct" : "incorrect";
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = order.indexOf(String(active.id));
-    const newIndex = order.indexOf(String(over.id));
-    onReorder(arrayMove(order, oldIndex, newIndex));
+  function moveTeam(fromIndex: number, toIndex: number) {
+    if (isLocked || toIndex < 0 || toIndex >= order.length) return;
+    onReorder(moveItem(order, fromIndex, toIndex));
   }
 
   return (
-    <DndContext
-      id={dndContextId(groupCode)}
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext items={order} strategy={verticalListSortingStrategy}>
-        <ol className="space-y-2">
-          {orderedTeams.map((team, index) => (
-            <SortableTeamRow
-              key={team.id}
-              team={team}
-              index={index}
-              locked={isLocked}
-              placement={placementAt(index, team.id)}
-            />
-          ))}
-        </ol>
-      </SortableContext>
-    </DndContext>
+    <ol className="space-y-2">
+      {orderedTeams.map((team, index) => (
+        <TeamOrderRow
+          key={team.id}
+          team={team}
+          index={index}
+          locked={isLocked}
+          placement={placementAt(index, team.id)}
+          count={orderedTeams.length}
+          onMove={(nextIndex) => moveTeam(index, nextIndex)}
+        />
+      ))}
+    </ol>
   );
 }

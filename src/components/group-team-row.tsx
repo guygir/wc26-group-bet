@@ -5,10 +5,11 @@ import { cn } from "@/lib/ui";
 import type { GroupStandingRow } from "@/lib/group-standings-fifa";
 import type { Team } from "@/lib/types";
 
-export function groupRowClassName(variant: "neutral" | "correct" | "incorrect", interactive = false) {
+export function groupRowClassName(variant: "neutral" | "bet-open" | "correct" | "incorrect", interactive = false) {
   return cn(
     "rounded-2xl p-3",
     variant === "neutral" && "bg-emerald-50/70",
+    variant === "bet-open" && "bg-emerald-100",
     variant === "correct" && "border-l-4 border-emerald-700 bg-emerald-200",
     variant === "incorrect" && "border-l-4 border-red-800 bg-red-400",
     interactive && "cursor-grab active:cursor-grabbing"
@@ -81,18 +82,19 @@ export function GroupTeamRowContent({
   stats?: GroupStandingRow;
   showStats?: boolean;
   placement?: "correct" | "incorrect";
-  rowVariant?: "neutral" | "correct" | "incorrect";
+  rowVariant?: "neutral" | "bet-open" | "correct" | "incorrect";
   betSide?: boolean;
   dragHandle?: ReactNode;
 }) {
   const variant = placement ?? rowVariant;
+  const badgeVariant = variant === "bet-open" ? "neutral" : variant;
   const gd =
     stats && stats.goalDifference > 0 ? `+${stats.goalDifference}` : String(stats?.goalDifference ?? 0);
 
   return (
     <GroupStandingsRowTable betSide={betSide}>
       <span className="gs-cell gs-rank">
-        <GroupPositionBadge index={index} variant={variant} />
+        <GroupPositionBadge index={index} variant={badgeVariant} />
       </span>
       <span className="gs-cell gs-flag">
         <TeamFlag name={team.name} size={28} />

@@ -33,10 +33,8 @@ describe("actualGroupTeamIds", () => {
     expect(actualGroupTeamIds(teams, [], ["d", "c", "b", "a"])).toEqual(["d", "c", "b", "a"]);
   });
 
-  it("uses live FIFA standings with no finished matches (pre-tournament tie-breakers)", () => {
-    const order = actualGroupTeamIds(teams, [], null);
-    expect(order).toHaveLength(4);
-    expect(new Set(order)).toEqual(new Set(["a", "b", "c", "d"]));
+  it("does not score live standings before any finished matches", () => {
+    expect(actualGroupTeamIds(teams, [], null)).toBeNull();
   });
 
   it("uses live FIFA standings after partial group results", () => {

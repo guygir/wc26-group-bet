@@ -20,5 +20,10 @@ export function actualGroupTeamIds(
     return officialOrder;
   }
 
+  const hasFinalScore = matches.some((match) => match.home_score !== null && match.away_score !== null);
+  if (!hasFinalScore) {
+    return null;
+  }
+
   return liveGroupTeamIds(teams, matches);
 }
