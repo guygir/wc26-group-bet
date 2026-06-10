@@ -51,6 +51,7 @@ export function ProfileAvatarUploader({
         uploading && "opacity-70"
       )}
       title="החלפת תמונת פרופיל"
+      style={{ position: "relative", display: "block", width: "6rem", height: "6rem" }}
     >
       <input
         ref={inputRef}
@@ -62,7 +63,7 @@ export function ProfileAvatarUploader({
         onChange={(event) => upload(event.target.files?.[0])}
       />
       {currentUrl ? (
-        <Image src={currentUrl} alt={name || ""} fill className="object-cover" sizes="96px" />
+        <Image src={currentUrl} alt={name || ""} fill className="object-cover" sizes="96px" style={{ objectFit: "cover" }} />
       ) : (
         <span className="absolute inset-0 grid place-items-center text-3xl font-black text-slate-300" aria-hidden>
           +
