@@ -1,0 +1,26 @@
+name: Sync scores
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-scores:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call score sync endpoint
+        env:
+          SYNC_URL: ${{ vars.SYNC_URL || 'https://wc26-group-bet.vercel.app/api/cron/sync-scores' }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing CRON_SECRET repository secret" >&2
+            exit 1
+          fi
+
+          curl --fail --show-error --silent \
+            --request GET \
+            --header "Authorization: Bearer $CRON_SECRET" \
+            "$SYNC_URL"

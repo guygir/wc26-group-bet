@@ -36,7 +36,9 @@ Fixtures and any available scores are fetched from OpenFootball public JSON:
 
 No API key, payment, or bot-sensitive scraping is required. Only **group-stage** matches (72) are stored. Admins can manually correct or reset final scores.
 
-Scores are **not live in the browser**. After deploy, Vercel Cron calls `/api/cron/sync-scores` every 30 minutes (protected by `CRON_SECRET`) to sync OpenFootball and recompute points. Admins can also sync manually.
+Scores are **not live in the browser**. After deploy, GitHub Actions calls `/api/cron/sync-scores` every 30 minutes (protected by `CRON_SECRET`) to sync OpenFootball and recompute points. Admins can also sync manually.
+
+For scheduled syncs, add a GitHub repository secret named `CRON_SECRET` with the same value used in Vercel. The workflow defaults to `https://wc26-group-bet.vercel.app/api/cron/sync-scores`; set a repository variable named `SYNC_URL` to override it.
 
 ## Game Rules (defaults, configurable in Admin)
 
