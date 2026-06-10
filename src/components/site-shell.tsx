@@ -34,18 +34,18 @@ export function SiteShell({ children, profile }: SiteShellProps) {
           sizes="100vw"
         />
         <Image
-          src="/brand/battalion-240-emblem-sharp-v2.png"
+          src="/brand/battalion-240-emblem-transparent.png"
           alt=""
           width={1024}
           height={1024}
-          className="absolute left-3 top-24 w-32 opacity-100 mix-blend-screen sm:left-8 sm:top-24 sm:w-44 lg:left-10 lg:w-56"
+          className="absolute left-3 top-24 w-32 opacity-100 sm:left-8 sm:top-24 sm:w-44 lg:left-10 lg:w-56"
         />
         <Image
           src="/brand/wc26-emblem-orange.png"
           alt=""
           width={240}
           height={240}
-          className="absolute right-[-0.75rem] top-20 w-36 opacity-100 sm:right-3 sm:top-24 sm:w-48 lg:right-4 lg:w-60"
+          className="absolute right-[-0.75rem] top-20 w-36 opacity-50 sm:right-3 sm:top-24 sm:w-48 lg:right-4 lg:w-60"
         />
       </div>
       <header className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
