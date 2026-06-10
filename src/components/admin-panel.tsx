@@ -1,11 +1,40 @@
 "use client";
 
 import { useState } from "react";
+import { AdminGroupStandings } from "@/components/admin-group-standings";
 import { Card, PrimaryButton } from "@/components/ui";
 import { t } from "@/lib/i18n";
-import type { Match, ScoringRules } from "@/lib/types";
+import { formatKickoff } from "@/lib/format";
+import { appLocale } from "@/lib/i18n";
+import { SCORING_RULE_KEYS, type Match, type ScoringRules, type Team } from "@/lib/types";
 
-export function AdminPanel({ matches, rules }: { matches: Match[]; rules: ScoringRules }) {
+const RULE_LABELS: Record<(typeof SCORING_RULE_KEYS)[number], () => string> = {
+  exact_home_goals_points: () => t.admin.rules.exactHome,
+  exact_away_goals_points: () => t.admin.rules.exactAway,
+  exact_goal_diff_points: () => t.admin.rules.exactDiff,
+  correct_result_points: () => t.admin.rules.correctResult,
+  group_correct_position_points: () => t.admin.rules.groupPosition,
+  group_perfect_bonus_points: () => t.admin.rules.groupPerfect,
+};
+
+type OfficialStanding = {
+  group_code: string;
+  ordered_team_ids: string[];
+};
+
+export function AdminPanel({
+  matches,
+  rules,
+  groups,
+  matchesByGroup,
+  officials,
+}: {
+  matches: Match[];
+  rules: ScoringRules;
+  groups: Record<string, Team[]>;
+  matchesByGroup: Record<string, Match[]>;
+  officials: OfficialStanding[];
+}) {
   const [message, setMessage] = useState<string | null>(null);
   const [ruleValues, setRuleValues] = useState(rules);
 
@@ -13,20 +42,43 @@ export function AdminPanel({ matches, rules }: { matches: Match[]; rules: Scorin
     setMessage("Syncing fixtures...");
     const response = await fetch("/api/admin/sync-fixtures", { method: "POST" });
     const result = (await response.json()) as { error?: string; sync?: { matches: number } };
-    setMessage(response.ok ? `Synced ${result.sync?.matches || 0} fixtures` : result.error || "Sync failed");
+    setMessage(
+      response.ok
+        ? `${t.admin.sync}: ${result.sync?.matches || 0} ${t.home.stats.groupMatches.toLowerCase()}`
+        : result.error || "Sync failed"
+    );
   }
 
-  async function saveScore(matchId: string, formData: FormData) {
-    const homeScore = Number(formData.get("homeScore"));
-    const awayScore = Number(formData.get("awayScore"));
-    setMessage("Saving score...");
+  async function saveScore(matchId: string, formData: FormData, reset = false) {
+    setMessage(reset ? "Resetting..." : "Saving score...");
+    const homeRaw = formData.get("homeScore");
+    const awayRaw = formData.get("awayScore");
+
+    const body =
+      reset || homeRaw === "" || awayRaw === ""
+        ? { homeScore: null, awayScore: null }
+        : { homeScore: Number(homeRaw), awayScore: Number(awayRaw) };
+
     const response = await fetch(`/api/admin/matches/${matchId}/score`, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ homeScore, awayScore }),
+      body: JSON.stringify(body),
     });
     const result = (await response.json()) as { error?: string };
-    setMessage(response.ok ? "Score saved and leaderboard recomputed" : result.error || "Could not save score");
+    setMessage(
+      response.ok
+        ? reset
+          ? t.admin.scoreResetLive
+          : t.admin.scoreSavedLive
+        : result.error || "Could not save score"
+    );
+  }
+
+  async function resetScore(matchId: string) {
+    setMessage("Resetting...");
+    const response = await fetch(`/api/admin/matches/${matchId}/reset`, { method: "POST" });
+    const result = (await response.json()) as { error?: string };
+    setMessage(response.ok ? t.admin.scoreResetLive : result.error || "Reset failed");
   }
 
   async function saveRules() {
@@ -57,14 +109,14 @@ export function AdminPanel({ matches, rules }: { matches: Match[]; rules: Scorin
 
       <Card as="section">
         <h2 className="text-2xl font-black">{t.admin.scoringRules}</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
-          {Object.entries(ruleValues).map(([key, value]) => (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {SCORING_RULE_KEYS.map((key) => (
             <label key={key} className="text-start text-sm font-bold text-slate-700">
-              {key.replaceAll("_", " ")}
+              {RULE_LABELS[key]()}
               <input
                 type="number"
                 min={0}
-                value={value}
+                value={ruleValues[key]}
                 onChange={(event) => setRuleValues((current) => ({ ...current, [key]: Number(event.target.value) }))}
                 className="mt-2 min-h-12 w-full rounded-2xl border border-emerald-100 px-4 py-3 text-lg font-black"
               />
@@ -85,11 +137,15 @@ export function AdminPanel({ matches, rules }: { matches: Match[]; rules: Scorin
               action={(formData) => saveScore(match.id, formData)}
               className="rounded-2xl border border-emerald-100 p-4"
             >
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">{match.group_code}</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
+                {match.group_code}
+                {match.match_number ? ` · #${match.match_number}` : ""}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">{formatKickoff(match.kickoff_at, appLocale)}</p>
               <p className="mt-2 text-start font-black">
                 {match.team1_name} vs {match.team2_name}
               </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
                 <input
                   name="homeScore"
                   type="number"
@@ -111,11 +167,31 @@ export function AdminPanel({ matches, rules }: { matches: Match[]; rules: Scorin
                 <button type="submit" className="min-h-12 rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">
                   {t.admin.save}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => resetScore(match.id)}
+                  className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold text-slate-700"
+                >
+                  {t.admin.reset}
+                </button>
               </div>
             </form>
           ))}
         </div>
       </Card>
+
+      <AdminGroupStandings
+        key={
+          officials
+            .map((row) => `${row.group_code}:${row.ordered_team_ids.join(",")}`)
+            .sort()
+            .join("|") || "live"
+        }
+        groups={groups}
+        matchesByGroup={matchesByGroup}
+        officials={officials}
+        onMessage={setMessage}
+      />
     </div>
   );
 }

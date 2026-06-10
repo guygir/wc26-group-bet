@@ -1,4 +1,33 @@
+import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
 import { createClient } from "@supabase/supabase-js";
+
+/** Next.js loads .env.local automatically; this CLI script must load it itself. */
+function loadEnvFile(filename) {
+  const path = resolve(process.cwd(), filename);
+  if (!existsSync(path)) return;
+
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile(".env");
+loadEnvFile(".env.local");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -64,16 +93,15 @@ const { data: teams, error: teamsError } = await admin.from("teams").select("id,
 if (teamsError) throw teamsError;
 const teamIds = new Map(teams.map((team) => [team.name, team.id]));
 
-const matchRows = payload.matches.map((match, index) => {
+const matchRows = groupMatches.map((match, index) => {
   const score = match.score?.ft;
-  const isGroup = isGroupStageMatch(match);
   return {
     source_key: sourceKeyForMatch(match, index),
     match_number: match.num || null,
     round: match.round,
-    group_code: isGroup ? match.group : null,
-    team1_id: isGroup ? teamIds.get(match.team1) || null : null,
-    team2_id: isGroup ? teamIds.get(match.team2) || null : null,
+    group_code: match.group,
+    team1_id: teamIds.get(match.team1) || null,
+    team2_id: teamIds.get(match.team2) || null,
     team1_name: match.team1,
     team2_name: match.team2,
     kickoff_at: kickoffIso(match.date, match.time),
@@ -86,7 +114,11 @@ const matchRows = payload.matches.map((match, index) => {
   };
 });
 
-const { error: matchesError } = await admin.from("matches").upsert(matchRows, { onConflict: "source_key" });
-if (matchesError) throw matchesError;
+if (matchRows.length) {
+  const { error: matchesError } = await admin.from("matches").upsert(matchRows, { onConflict: "source_key" });
+  if (matchesError) throw matchesError;
+}
 
-console.log(`Synced ${matchRows.length} matches and ${uniqueTeams.length} teams from ${payload.name}`);
+await admin.from("matches").delete().is("group_code", null);
+
+console.log(`Synced ${matchRows.length} group-stage matches and ${uniqueTeams.length} teams from ${payload.name}`);

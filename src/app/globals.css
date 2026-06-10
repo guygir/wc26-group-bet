@@ -16,7 +16,7 @@ body {
 button,
 a,
 input {
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
 @layer base {
@@ -84,5 +84,84 @@ input {
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* Group standings rows */
+.gs-row-table {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.gs-row-table .gs-cell {
+  display: table-cell;
+  vertical-align: middle;
+  padding-inline-end: 0.5rem;
+}
+
+.gs-row-table .gs-rank {
+  width: 2.5rem;
+  text-align: center;
+  padding-inline: 0;
+  padding-inline-end: 0;
+}
+
+.gs-row-table .gs-flag {
+  width: 1.75rem;
+}
+
+.gs-row-table .gs-name {
+  width: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gs-row-table .gs-stat {
+  width: 2.5rem !important;
+  min-width: 2.5rem !important;
+  max-width: 2.5rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  padding-inline: 0.125rem;
+}
+
+.gs-row-table .gs-stat-header {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(100 116 139);
+}
+
+.gs-row-table--bet .gs-drag {
+  width: 1.5rem;
+  text-align: center;
+  padding-inline-end: 0;
+}
+
+/* Match cards grid — plain CSS (reliable with Tailwind v4) */
+.match-cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
+}
+
+.match-cards-grid__card {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 640px) {
+  .match-cards-grid__card {
+    flex: 0 0 calc((100% - 1rem) / 2);
+    max-width: calc((100% - 1rem) / 2);
   }
 }

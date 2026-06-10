@@ -9,7 +9,6 @@ import { t } from "@/lib/i18n";
 export default async function Home() {
   const { profile } = await getCurrentUserProfile();
   const stats = {
-    matches: 0,
     groupMatches: 0,
     finished: 0,
     users: 0,
@@ -17,13 +16,16 @@ export default async function Home() {
 
   if (isAdminConfigured()) {
     const admin = createAdminClient();
-    const [{ count: matches }, { count: groupMatches }, { count: finished }, { count: users }] = await Promise.all([
-      admin.from("matches").select("id", { count: "exact", head: true }),
+    const [{ count: groupMatches }, { count: finished }, { count: users }] = await Promise.all([
       admin.from("matches").select("id", { count: "exact", head: true }).not("group_code", "is", null),
-      admin.from("matches").select("id", { count: "exact", head: true }).eq("status", "final"),
+      admin
+        .from("matches")
+        .select("id", { count: "exact", head: true })
+        .not("group_code", "is", null)
+        .not("home_score", "is", null)
+        .not("away_score", "is", null),
       admin.from("profiles").select("user_id", { count: "exact", head: true }),
     ]);
-    stats.matches = matches || 0;
     stats.groupMatches = groupMatches || 0;
     stats.finished = finished || 0;
     stats.users = users || 0;
@@ -51,9 +53,8 @@ export default async function Home() {
         </div>
       ) : null}
 
-      <section className="mt-6 grid gap-4 md:grid-cols-4">
+      <section className="mt-6 grid gap-4 sm:grid-cols-3">
         {[
-          [t.home.stats.totalFixtures, stats.matches],
           [t.home.stats.groupMatches, stats.groupMatches],
           [t.home.stats.finalScores, stats.finished],
           [t.home.stats.players, stats.users],

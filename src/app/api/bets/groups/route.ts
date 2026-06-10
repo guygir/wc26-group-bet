@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { recomputeAllScores } from "@/lib/recompute";
+import { revalidateLivePages } from "@/lib/revalidate-pages";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type IncomingBet = {
@@ -42,5 +45,9 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, saved: rows.length });
+  const admin = createAdminClient();
+  const scoring = await recomputeAllScores(admin);
+  revalidateLivePages();
+
+  return NextResponse.json({ success: true, saved: rows.length, scoring });
 }

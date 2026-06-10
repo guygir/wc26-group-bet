@@ -1,20 +1,66 @@
-import { DEFAULT_SCORING_RULES, type Match, type MatchBet, type ScoringRules, type Team } from "@/lib/types";
+import {
+  DEFAULT_SCORING_RULES,
+  type Match,
+  type MatchBet,
+  type MatchScoreBreakdown,
+  type ScoringRules,
+  type ScoreReason,
+  type Team,
+} from "@/lib/types";
+import { buildGroupStandingsFifa, type GroupStandingRow } from "@/lib/group-standings-fifa";
+import { resultFor } from "@/lib/match-result";
 
-type Result = "home" | "away" | "draw";
+export type TeamStanding = GroupStandingRow;
 
-export type TeamStanding = {
-  teamId: string;
-  played: number;
-  points: number;
-  goalDifference: number;
-  goalsFor: number;
-  goalsAgainst: number;
-};
+export { resultFor } from "@/lib/match-result";
 
-export function resultFor(home: number, away: number): Result {
-  if (home > away) return "home";
-  if (away > home) return "away";
-  return "draw";
+export function scoreMatchBetDetailed(
+  bet: MatchBet,
+  match: Pick<Match, "home_score" | "away_score">,
+  rules: ScoringRules = DEFAULT_SCORING_RULES
+): MatchScoreBreakdown {
+  if (match.home_score === null || match.away_score === null) {
+    return { total: 0, reasons: [] };
+  }
+
+  const reasons: ScoreReason[] = [];
+
+  if (bet.home_score === match.home_score) {
+    reasons.push({
+      code: "exact_home",
+      points: rules.exact_home_goals_points,
+      labelKey: "scoring.exactHome",
+    });
+  }
+
+  if (bet.away_score === match.away_score) {
+    reasons.push({
+      code: "exact_away",
+      points: rules.exact_away_goals_points,
+      labelKey: "scoring.exactAway",
+    });
+  }
+
+  const predictedDiff = bet.home_score - bet.away_score;
+  const actualDiff = match.home_score - match.away_score;
+  if (predictedDiff === actualDiff) {
+    reasons.push({
+      code: "exact_diff",
+      points: rules.exact_goal_diff_points,
+      labelKey: "scoring.exactDiff",
+    });
+  }
+
+  if (resultFor(bet.home_score, bet.away_score) === resultFor(match.home_score, match.away_score)) {
+    reasons.push({
+      code: "correct_result",
+      points: rules.correct_result_points,
+      labelKey: "scoring.correctResult",
+    });
+  }
+
+  const total = reasons.reduce((sum, reason) => sum + reason.points, 0);
+  return { total, reasons };
 }
 
 export function scoreMatchBet(
@@ -22,74 +68,43 @@ export function scoreMatchBet(
   match: Pick<Match, "home_score" | "away_score">,
   rules: ScoringRules = DEFAULT_SCORING_RULES
 ) {
-  if (match.home_score === null || match.away_score === null) {
-    return 0;
-  }
-
-  if (bet.home_score === match.home_score && bet.away_score === match.away_score) {
-    return rules.exact_score_points;
-  }
-
-  return resultFor(bet.home_score, bet.away_score) === resultFor(match.home_score, match.away_score)
-    ? rules.correct_outcome_points
-    : 0;
+  return scoreMatchBetDetailed(bet, match, rules).total;
 }
 
+/** Group table order per FIFA WC26 tie-breakers (see group-standings-fifa.ts). */
 export function buildGroupStandings(teams: Team[], matches: Match[]) {
-  const table = new Map<string, TeamStanding>();
+  return buildGroupStandingsFifa(teams, matches);
+}
 
-  for (const team of teams) {
-    table.set(team.id, {
-      teamId: team.id,
-      played: 0,
-      points: 0,
-      goalDifference: 0,
-      goalsFor: 0,
-      goalsAgainst: 0,
+export function scoreGroupStandingBetDetailed(
+  predictedTeamIds: string[],
+  actualTeamIds: string[],
+  rules: ScoringRules = DEFAULT_SCORING_RULES
+) {
+  const reasons: ScoreReason[] = [];
+  let correctCount = 0;
+
+  predictedTeamIds.forEach((predictedTeamId, index) => {
+    if (actualTeamIds[index] === predictedTeamId) {
+      correctCount += 1;
+      reasons.push({
+        code: "group_position",
+        points: rules.group_correct_position_points,
+        labelKey: "scoring.groupPosition",
+      });
+    }
+  });
+
+  if (correctCount === 4 && predictedTeamIds.length === 4) {
+    reasons.push({
+      code: "group_perfect",
+      points: rules.group_perfect_bonus_points,
+      labelKey: "scoring.groupPerfect",
     });
   }
 
-  for (const match of matches) {
-    if (
-      !match.team1_id ||
-      !match.team2_id ||
-      match.home_score === null ||
-      match.away_score === null ||
-      !table.has(match.team1_id) ||
-      !table.has(match.team2_id)
-    ) {
-      continue;
-    }
-
-    const home = table.get(match.team1_id)!;
-    const away = table.get(match.team2_id)!;
-    home.played += 1;
-    away.played += 1;
-    home.goalsFor += match.home_score;
-    home.goalsAgainst += match.away_score;
-    away.goalsFor += match.away_score;
-    away.goalsAgainst += match.home_score;
-    home.goalDifference = home.goalsFor - home.goalsAgainst;
-    away.goalDifference = away.goalsFor - away.goalsAgainst;
-
-    const result = resultFor(match.home_score, match.away_score);
-    if (result === "home") home.points += 3;
-    if (result === "away") away.points += 3;
-    if (result === "draw") {
-      home.points += 1;
-      away.points += 1;
-    }
-  }
-
-  return [...table.values()].sort((a, b) => {
-    const byPoints = b.points - a.points;
-    if (byPoints) return byPoints;
-    const byGoalDifference = b.goalDifference - a.goalDifference;
-    if (byGoalDifference) return byGoalDifference;
-    const byGoalsFor = b.goalsFor - a.goalsFor;
-    if (byGoalsFor) return byGoalsFor;
-    return a.teamId.localeCompare(b.teamId);
-  });
+  const total = reasons.reduce((sum, reason) => sum + reason.points, 0);
+  return { total, reasons, correctCount };
 }
 
 export function scoreGroupStandingBet(
@@ -97,17 +112,9 @@ export function scoreGroupStandingBet(
   actualTeamIds: string[],
   rules: ScoringRules = DEFAULT_SCORING_RULES
 ) {
-  const actualTopTwo = new Set(actualTeamIds.slice(0, 2));
+  return scoreGroupStandingBetDetailed(predictedTeamIds, actualTeamIds, rules).total;
+}
 
-  return predictedTeamIds.reduce((points, predictedTeamId, index) => {
-    if (actualTeamIds[index] === predictedTeamId) {
-      return points + rules.exact_group_position_points;
-    }
-
-    if (index < 2 && actualTopTwo.has(predictedTeamId)) {
-      return points + rules.qualified_wrong_order_points;
-    }
-
-    return points;
-  }, 0);
+export function matchHasFinalScore(match: Pick<Match, "home_score" | "away_score">) {
+  return match.home_score !== null && match.away_score !== null;
 }

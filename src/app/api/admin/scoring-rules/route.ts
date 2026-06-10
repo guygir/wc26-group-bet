@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminOrCron } from "@/lib/admin-auth";
 import { recomputeAllScores } from "@/lib/recompute";
+import { SCORING_RULE_KEYS } from "@/lib/types";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const RULE_KEYS = [
-  "exact_score_points",
-  "correct_outcome_points",
-  "exact_group_position_points",
-  "qualified_wrong_order_points",
-] as const;
 
 export async function PATCH(request: NextRequest) {
   const forbidden = await requireAdminOrCron(request);
@@ -17,7 +11,7 @@ export async function PATCH(request: NextRequest) {
   const body = (await request.json()) as Record<string, unknown>;
   const update: Record<string, number | string> = { updated_at: new Date().toISOString() };
 
-  for (const key of RULE_KEYS) {
+  for (const key of SCORING_RULE_KEYS) {
     const value = body[key];
     if (!Number.isInteger(value) || Number(value) < 0) {
       return NextResponse.json({ error: `${key} must be a non-negative integer` }, { status: 400 });

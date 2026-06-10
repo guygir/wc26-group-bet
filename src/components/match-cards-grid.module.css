@@ -1,0 +1,176 @@
+/* Match card layout — CSS module (composes with global match-cards-grid__card) */
+.matchCard {
+  border-radius: 1.5rem;
+  border: 1px solid rgb(226 232 240);
+  background: rgb(255 255 255);
+  padding: 1.25rem 1.125rem;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06);
+}
+
+.matchGrid {
+  display: grid;
+  width: 100%;
+  direction: ltr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 0.5rem;
+  row-gap: 0.5rem;
+  align-items: center;
+  justify-items: center;
+}
+
+.cell {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.homeCol {
+  grid-column: 1;
+}
+
+.awayCol {
+  grid-column: 3;
+}
+
+.sep {
+  grid-column: 2;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  color: rgb(203 213 225);
+}
+
+.teamName {
+  width: 100%;
+  max-width: 11rem;
+  font-size: 1.125rem;
+  font-weight: 900;
+  line-height: 1.3;
+  color: rgb(15 23 42);
+}
+
+@media (min-width: 640px) {
+  .teamName {
+    font-size: 1.25rem;
+  }
+}
+
+.scoreInput {
+  box-sizing: border-box;
+  width: 3.25rem;
+  min-height: 2.75rem;
+  border-radius: 1rem;
+  border: 2px solid rgb(209 250 229);
+  background: white;
+  padding: 0.25rem;
+  text-align: center;
+  font-size: 1.375rem;
+  font-weight: 900;
+  color: rgb(15 23 42);
+}
+
+.scoreInput:focus {
+  outline: none;
+  border-color: rgb(16 185 129);
+  box-shadow: 0 0 0 3px rgb(16 185 129 / 0.25);
+}
+
+.scoreInput:disabled {
+  background: rgb(241 245 249);
+  color: rgb(148 163 184);
+}
+
+.boxLabel {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.betBox {
+  margin-top: 1.25rem;
+  border-radius: 1.25rem;
+  border: 2px solid rgb(209 250 229);
+  background: rgb(236 253 245);
+  padding: 1rem 0.75rem;
+}
+
+.betBox .boxLabel {
+  color: rgb(4 120 87);
+}
+
+.finalBox {
+  border-radius: 1.25rem;
+  border: 2px solid rgb(203 213 225);
+  background: rgb(248 250 252);
+  padding: 1rem 0.75rem;
+}
+
+.finalBox .boxLabel {
+  color: rgb(71 85 105);
+}
+
+.finalGrid {
+  display: grid;
+  width: 100%;
+  direction: ltr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: 0.5rem;
+  align-items: center;
+  justify-items: center;
+}
+
+.finalValue {
+  font-size: 1.75rem;
+  font-weight: 900;
+  line-height: 1.1;
+  color: rgb(15 23 42);
+}
+
+.pointsBox {
+  border-radius: 1.25rem;
+  border: 2px solid rgb(167 243 208);
+  background: rgb(236 253 245);
+  padding: 1rem;
+  text-align: center;
+}
+
+.pointsBox .boxLabel {
+  margin-bottom: 0.5rem;
+  color: rgb(4 120 87);
+}
+
+.pointsValue {
+  font-size: 1.75rem;
+  font-weight: 900;
+  color: rgb(6 78 59);
+}
+
+.pointsReasons {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(4 120 87);
+}
+
+.leadersBox {
+  border-radius: 1.25rem;
+  border: 2px solid rgb(203 213 225);
+  background: rgb(255 255 255);
+  padding: 1rem;
+  text-align: center;
+}
+
+.finishedSections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}

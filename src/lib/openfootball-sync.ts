@@ -7,6 +7,7 @@ type SupabaseAdmin = SupabaseClient;
 export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootballPayload) {
   const data = payload || (await fetchOpenFootballFixtures());
   const groupMatches = data.matches.filter(isGroupStageMatch);
+
   const teamRows = groupMatches.flatMap((match) => [
     { name: match.team1, group_code: match.group },
     { name: match.team2, group_code: match.group },
@@ -22,22 +23,21 @@ export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootb
   if (teamsError) throw teamsError;
 
   const teamIds = new Map((teams || []).map((team) => [team.name, team.id]));
-  const matchRows = data.matches.map((match, index) => {
+  const matchRows = groupMatches.map((match, index) => {
     const score = match.score?.ft;
-    const isGroup = isGroupStageMatch(match);
 
     return {
       source_key: sourceKeyForMatch(match, index),
       match_number: match.num || null,
       round: match.round,
-      group_code: isGroup ? match.group : null,
-      team1_id: isGroup ? teamIds.get(match.team1) || null : null,
-      team2_id: isGroup ? teamIds.get(match.team2) || null : null,
+      group_code: match.group,
+      team1_id: teamIds.get(match.team1) || null,
+      team2_id: teamIds.get(match.team2) || null,
       team1_name: match.team1,
       team2_name: match.team2,
       kickoff_at: kickoffIso(match.date, match.time),
       venue: match.ground || null,
-      status: score ? "final" : "scheduled",
+      status: score ? ("final" as const) : ("scheduled" as const),
       home_score: score ? score[0] : null,
       away_score: score ? score[1] : null,
       source_payload: match,
@@ -45,8 +45,12 @@ export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootb
     };
   });
 
-  const { error: matchesError } = await admin.from("matches").upsert(matchRows, { onConflict: "source_key" });
-  if (matchesError) throw matchesError;
+  if (matchRows.length) {
+    const { error: matchesError } = await admin.from("matches").upsert(matchRows, { onConflict: "source_key" });
+    if (matchesError) throw matchesError;
+  }
+
+  await admin.from("matches").delete().is("group_code", null);
 
   return {
     name: data.name,

@@ -15,7 +15,7 @@ export function Card<T extends ElementType = "div">({
   return (
     <Component
       className={cn(
-        "rounded-[1.75rem] border border-white/80 bg-white/85 p-4 shadow-sm shadow-emerald-900/5 backdrop-blur sm:p-5",
+        "rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5",
         className
       )}
     >
@@ -62,6 +62,9 @@ export function StatusPill({
     </span>
   );
 }
+
+export const saveButtonClassName =
+  "min-h-14 w-full text-lg font-black sm:w-auto sm:min-w-[14rem]";
 
 export function PrimaryButton({
   className,

@@ -1,24 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { buildGroupStandings, scoreGroupStandingBet, scoreMatchBet } from "@/lib/scoring";
+import { buildGroupStandings, scoreGroupStandingBet, scoreMatchBet, scoreMatchBetDetailed } from "@/lib/scoring";
+import { DEFAULT_SCORING_RULES } from "@/lib/types";
 import type { Match, Team } from "@/lib/types";
 
-describe("scoreMatchBet", () => {
-  it("awards exact score points first", () => {
-    expect(
-      scoreMatchBet(
-        { match_id: "m1", home_score: 2, away_score: 1 },
-        { home_score: 2, away_score: 1 }
-      )
-    ).toBe(3);
+describe("scoreMatchBetDetailed", () => {
+  it("stacks all applicable rules up to 6", () => {
+    const breakdown = scoreMatchBetDetailed(
+      { match_id: "m1", home_score: 3, away_score: 1 },
+      { home_score: 3, away_score: 1 },
+      DEFAULT_SCORING_RULES
+    );
+    expect(breakdown.total).toBe(6);
+    expect(breakdown.reasons).toHaveLength(4);
   });
 
-  it("awards outcome points for the right winner", () => {
-    expect(
-      scoreMatchBet(
-        { match_id: "m1", home_score: 3, away_score: 1 },
-        { home_score: 2, away_score: 1 }
-      )
-    ).toBe(1);
+  it("awards diff for away-win margin", () => {
+    const breakdown = scoreMatchBetDetailed(
+      { match_id: "m1", home_score: 0, away_score: 2 },
+      { home_score: 1, away_score: 3 },
+      DEFAULT_SCORING_RULES
+    );
+    expect(breakdown.reasons.some((r) => r.code === "exact_diff")).toBe(true);
+    expect(breakdown.reasons.some((r) => r.code === "correct_result")).toBe(true);
+  });
+
+  it("awards 1 point for exact away goals only (e.g. bet 3-2, final 2-2)", () => {
+    const breakdown = scoreMatchBetDetailed(
+      { match_id: "m1", home_score: 3, away_score: 2 },
+      { home_score: 2, away_score: 2 },
+      DEFAULT_SCORING_RULES
+    );
+    expect(breakdown.total).toBe(1);
+    expect(breakdown.reasons).toEqual([
+      expect.objectContaining({ code: "exact_away", points: 1 }),
+    ]);
   });
 
   it("awards no points before final score", () => {
@@ -64,10 +79,14 @@ describe("group standings scoring", () => {
   })) as Match[];
 
   it("builds a points, goal difference, goals-for table", () => {
-    expect(buildGroupStandings(teams, matches).map((standing) => standing.teamId)).toEqual(["a", "c", "b", "d"]);
+    expect(buildGroupStandings(teams, matches).map((standing) => standing.teamId)).toEqual(["a", "b", "c", "d"]);
   });
 
-  it("awards exact positions and top-two wrong-order points", () => {
-    expect(scoreGroupStandingBet(["c", "a", "b", "d"], ["a", "c", "b", "d"])).toBe(8);
+  it("awards 1 per correct slot and +1 bonus when all four match", () => {
+    expect(scoreGroupStandingBet(["a", "b", "c", "d"], ["a", "b", "c", "d"])).toBe(5);
+  });
+
+  it("awards partial credit without perfect bonus", () => {
+    expect(scoreGroupStandingBet(["c", "a", "b", "d"], ["a", "b", "c", "d"])).toBe(1);
   });
 });

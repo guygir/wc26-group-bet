@@ -1,9 +1,13 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import { useMemo, useState } from "react";
-import { PageHeader, PrimaryButton, StatusPill } from "@/components/ui";
-import { t } from "@/lib/i18n";
+import { useEffect, useMemo, useState } from "react";
+import { GroupLiveStandingsList } from "@/components/group-live-standings-list";
+import { GroupSortableList } from "@/components/group-sortable-list";
+import { ScoringRulesPanel } from "@/components/scoring-rules-panel";
+import { PageHeader, PrimaryButton, StatusPill, saveButtonClassName } from "@/components/ui";
+import { appLocale, t } from "@/lib/i18n";
+import { formatCountdown } from "@/lib/format";
+import type { GroupStandingRow } from "@/lib/group-standings-fifa";
 import type { Team } from "@/lib/types";
 
 type ExistingGroupBet = {
@@ -11,16 +15,38 @@ type ExistingGroupBet = {
   ordered_team_ids: string[];
 };
 
+const GROUP_ORDER = [
+  "Group A",
+  "Group B",
+  "Group C",
+  "Group D",
+  "Group E",
+  "Group F",
+  "Group G",
+  "Group H",
+  "Group I",
+  "Group J",
+  "Group K",
+  "Group L",
+] as const;
+
 export function GroupBetsForm({
   groups,
   bets,
   firstKickoffs,
+  liveOrderByGroup,
+  statsByGroup,
+  pointsByGroup,
+  overrideGroups,
 }: {
   groups: Record<string, Team[]>;
   bets: ExistingGroupBet[];
   firstKickoffs: Record<string, string>;
+  liveOrderByGroup: Record<string, string[]>;
+  statsByGroup: Record<string, Record<string, GroupStandingRow>>;
+  pointsByGroup: Record<string, number>;
+  overrideGroups: string[];
 }) {
-  const reduceMotion = useReducedMotion();
   const initial = useMemo(() => {
     const map = new Map<string, string[]>();
     for (const [group, teams] of Object.entries(groups)) {
@@ -35,26 +61,24 @@ export function GroupBetsForm({
   const [orders, setOrders] = useState(initial);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [now] = useState(() => Date.now());
-  const motionTransition = { duration: 0.35, ease: [0.16, 1, 0.3, 1] as const };
-  const itemProps = reduceMotion
-    ? {}
-    : {
-        initial: { opacity: 0, y: 14 },
-        animate: { opacity: 1, y: 0 },
-      };
+  const [now, setNow] = useState<number | null>(null);
 
-  function move(group: string, index: number, direction: -1 | 1) {
-    setOrders((current) => {
-      const next = new Map(current);
-      const order = [...(next.get(group) || [])];
-      const target = index + direction;
-      if (target < 0 || target >= order.length) return current;
-      [order[index], order[target]] = [order[target], order[index]];
-      next.set(group, order);
-      return next;
-    });
-  }
+  const earliestKickoff = useMemo(() => {
+    const times = Object.values(firstKickoffs).map((iso) => new Date(iso).getTime()).filter(Number.isFinite);
+    return times.length ? Math.min(...times) : null;
+  }, [firstKickoffs]);
+
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const startId = window.setTimeout(tick, 0);
+    const id = window.setInterval(tick, 1000);
+    return () => {
+      window.clearTimeout(startId);
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const globalLocked = earliestKickoff !== null && now !== null && earliestKickoff <= now;
 
   async function save() {
     setSaving(true);
@@ -70,72 +94,107 @@ export function GroupBetsForm({
     setMessage(response.ok ? `${result.saved || 0} ${t.groups.saved}` : result.error || "Could not save groups");
   }
 
+  const globalCountdown =
+    earliestKickoff && now !== null && !globalLocked ? formatCountdown(earliestKickoff - now, appLocale) : null;
+
   return (
     <div className="space-y-5">
       <PageHeader
         title={t.groups.title}
-        body={t.groups.body}
+        body={t.groups.bodyMerged}
         action={
-          <PrimaryButton onClick={save} disabled={saving} className="w-full sm:w-auto">
+          <PrimaryButton onClick={save} disabled={saving} className={saveButtonClassName}>
             {saving ? t.groups.saving : t.groups.save}
           </PrimaryButton>
         }
       />
 
-      {message ? <p className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">{message}</p> : null}
+      <ScoringRulesPanel variant="group" />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {Object.entries(groups).map(([group, teams], groupIndex) => {
-          const locked = new Date(firstKickoffs[group]).getTime() <= now;
-          const teamById = new Map(teams.map((team) => [team.id, team]));
+      <div className="rounded-2xl border border-emerald-100 bg-white/95 px-4 py-3 text-sm leading-relaxed text-slate-600">
+        <p>{t.groups.compareHint}</p>
+        <p className="mt-2">{t.groups.colorHint}</p>
+        <p className="mt-2">{t.groups.dragHint}</p>
+      </div>
+
+      {earliestKickoff ? (
+        <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-800">
+          {globalLocked
+            ? t.matches.locked
+            : globalCountdown
+              ? `${t.groups.locksIn} ${globalCountdown}`
+              : t.matches.open}
+        </p>
+      ) : null}
+
+      {message ? (
+        <p className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white" role="status">
+          {message}
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-4">
+        {GROUP_ORDER.map((group) => {
+          const teams = groups[group];
+          if (!teams?.length) return null;
+
+          const locked = now !== null && new Date(firstKickoffs[group]).getTime() <= now;
           const order = orders.get(group) || teams.map((team) => team.id);
+          const liveOrder = liveOrderByGroup[group] || teams.map((team) => team.id);
+          const hasOverride = overrideGroups.includes(group);
+          const userPoints = pointsByGroup[group];
 
           return (
-            <motion.section
+            <section
               key={group}
-              className="rounded-[1.75rem] border border-white/80 bg-white/85 p-4 shadow-sm shadow-emerald-900/5 backdrop-blur sm:p-5"
-              {...itemProps}
-              transition={reduceMotion ? undefined : { ...motionTransition, delay: Math.min(groupIndex * 0.03, 0.25) }}
+              className="rounded-[1.75rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
             >
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-black">{group}</h2>
-                <StatusPill locked={locked} labels={{ locked: t.groups.locked, open: t.groups.open }} />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-black text-slate-900">{group}</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <StatusPill locked={locked} labels={{ locked: t.groups.locked, open: t.groups.open }} />
+                  {hasOverride ? (
+                    <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">
+                      {t.groups.adminOverride}
+                    </span>
+                  ) : null}
+                  {userPoints !== undefined ? (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
+                      {t.groups.yourPoints}: {userPoints}
+                    </span>
+                  ) : null}
+                </div>
               </div>
-              <ol className="mt-4 space-y-3">
-                {order.map((teamId, index) => {
-                  const team = teamById.get(teamId);
-                  if (!team) return null;
-                  return (
-                    <li key={teamId} className="rounded-2xl bg-emerald-50/70 p-3">
-                      <div className="flex items-center gap-3">
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-white text-sm font-black">
-                          {index + 1}
-                        </span>
-                        <span className="flex-1 text-start font-bold">{team.name}</span>
-                      </div>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          disabled={locked || index === 0}
-                          onClick={() => move(group, index, -1)}
-                          className="min-h-10 rounded-full bg-white px-3 py-2 text-sm font-black disabled:opacity-30"
-                        >
-                          {t.groups.moveUp}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={locked || index === order.length - 1}
-                          onClick={() => move(group, index, 1)}
-                          className="min-h-10 rounded-full bg-white px-3 py-2 text-sm font-black disabled:opacity-30"
-                        >
-                          {t.groups.moveDown}
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            </motion.section>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2" dir="ltr">
+                <div className="min-w-0 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3 sm:p-4">
+                  <p className="mb-3 text-center text-sm font-black text-emerald-800">{t.groups.liveTable}</p>
+                  <GroupLiveStandingsList
+                    teams={teams}
+                    order={liveOrder}
+                    statsByTeamId={statsByGroup[group] || {}}
+                  />
+                </div>
+
+                <div className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 sm:p-4">
+                  <p className="mb-3 text-center text-sm font-black text-slate-800">{t.groups.yourBet}</p>
+                  <GroupSortableList
+                    groupCode={group}
+                    teams={teams}
+                    order={order}
+                    actualOrder={liveOrder}
+                    locked={locked}
+                    onReorder={(nextOrder) => {
+                      setOrders((current) => {
+                        const next = new Map(current);
+                        next.set(group, nextOrder);
+                        return next;
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            </section>
           );
         })}
       </div>
