@@ -1,6 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
+import { BrandLogoPicker } from "@/components/brand-logo-picker";
 import { LogoutButton } from "@/components/logout-button";
-import { UserAvatar } from "@/components/user-avatar";
+import { ProfileAvatarUploader } from "@/components/profile-avatar-uploader";
 import { t } from "@/lib/i18n";
 import { cn } from "@/lib/ui";
 
@@ -21,18 +23,44 @@ export function SiteShell({ children, profile }: SiteShellProps) {
   ];
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,#bbf7d0,transparent_34%),linear-gradient(135deg,#f8fafc,#ecfdf5)] text-slate-950">
-      <header className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+    <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top_left,#bbf7d0,transparent_34%),linear-gradient(135deg,#f8fafc,#ecfdf5)] text-slate-950">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+        <Image
+          src="/brand/battalion-240-banner.png"
+          alt=""
+          fill
+          priority
+          className="object-cover opacity-[0.12]"
+          sizes="100vw"
+        />
+        <div className="absolute inset-0 bg-emerald-50/70" />
+        <Image
+          src="/brand/battalion-240-emblem-transparent.png"
+          alt=""
+          width={1024}
+          height={1024}
+          className="absolute left-3 top-24 w-32 opacity-[0.22] sm:left-8 sm:top-24 sm:w-44 lg:left-10 lg:w-56"
+        />
+        <Image
+          src="/brand/wc26-emblem-orange.png"
+          alt=""
+          width={240}
+          height={240}
+          className="absolute right-[-0.75rem] top-20 w-36 opacity-[0.18] sm:right-3 sm:top-24 sm:w-48 lg:right-4 lg:w-60"
+        />
+      </div>
+      <header className="relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="flex min-h-12 items-center gap-3 rounded-2xl">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-600 text-xl font-black text-white">
-              26
-            </div>
+          <div className="flex min-h-12 items-center gap-3 rounded-2xl">
+            <BrandLogoPicker />
             <div className="text-start">
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-emerald-700">{t.shell.eyebrow}</p>
-              <p className="text-lg font-black">{t.shell.title}</p>
+              <Link href="/" className="rounded-xl">
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-emerald-700">{t.shell.eyebrow}</p>
+                <p className="text-lg font-black">{t.shell.title}</p>
+                <p className="text-sm font-black text-slate-600">{t.shell.unit}</p>
+              </Link>
             </div>
-          </Link>
+          </div>
 
           {!profile ? (
             <Link
@@ -61,7 +89,7 @@ export function SiteShell({ children, profile }: SiteShellProps) {
 
           {profile ? (
             <div className="flex min-w-0 items-center gap-4 rounded-3xl bg-white/60 p-2 shadow-sm lg:bg-transparent lg:p-0 lg:shadow-none">
-              <UserAvatar url={profile.avatar_url} name={profile.nickname} size="2xl" />
+              <ProfileAvatarUploader url={profile.avatar_url} name={profile.nickname} />
               <span className="truncate text-lg font-black sm:text-xl">{profile.nickname}</span>
               <LogoutButton />
             </div>
@@ -74,7 +102,7 @@ export function SiteShell({ children, profile }: SiteShellProps) {
           </Link>
         )}
       </header>
-      <main className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-5">{children}</main>
+      <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-12 sm:px-5">{children}</main>
     </div>
   );
 }

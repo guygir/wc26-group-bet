@@ -101,7 +101,7 @@ export function GroupBetsForm({
     <div className="space-y-5">
       <PageHeader
         title={t.groups.title}
-        body={t.groups.bodyMerged}
+        body={t.groups.body}
         action={
           <PrimaryButton onClick={save} disabled={saving} className={saveButtonClassName}>
             {saving ? t.groups.saving : t.groups.save}
@@ -110,12 +110,6 @@ export function GroupBetsForm({
       />
 
       <ScoringRulesPanel variant="group" />
-
-      <div className="rounded-2xl border border-emerald-100 bg-white/95 px-4 py-3 text-sm leading-relaxed text-slate-600">
-        <p>{t.groups.compareHint}</p>
-        <p className="mt-2">{t.groups.colorHint}</p>
-        <p className="mt-2">{t.groups.dragHint}</p>
-      </div>
 
       {earliestKickoff ? (
         <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-800">

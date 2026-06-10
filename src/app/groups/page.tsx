@@ -73,8 +73,6 @@ export default async function GroupsPage() {
         .eq("source_type", "group"),
     ]);
 
-  const officialByGroup = new Map(officials.map((row) => [row.group_code, row.ordered_team_ids]));
-
   const grouped: Record<string, Team[]> = {};
   for (const team of (teams || []) as Team[]) {
     grouped[team.group_code] = [...(grouped[team.group_code] || []), team];

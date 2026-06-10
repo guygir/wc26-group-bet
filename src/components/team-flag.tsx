@@ -2,7 +2,7 @@ import Image from "next/image";
 import { flagUrlForTeam } from "@/lib/team-flags";
 
 export function TeamFlag({ name, size = 28 }: { name: string; size?: number }) {
-  const url = flagUrlForTeam(name, 40);
+  const url = flagUrlForTeam(name, 80);
 
   if (!url) {
     return (

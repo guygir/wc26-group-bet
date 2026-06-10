@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AdminGroupStandings } from "@/components/admin-group-standings";
 import { Card, PrimaryButton } from "@/components/ui";
@@ -35,6 +36,7 @@ export function AdminPanel({
   matchesByGroup: Record<string, Match[]>;
   officials: OfficialStanding[];
 }) {
+  const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [ruleValues, setRuleValues] = useState(rules);
 
@@ -79,6 +81,18 @@ export function AdminPanel({
     const response = await fetch(`/api/admin/matches/${matchId}/reset`, { method: "POST" });
     const result = (await response.json()) as { error?: string };
     setMessage(response.ok ? t.admin.scoreResetLive : result.error || "Reset failed");
+  }
+
+  async function setDebugLock(matchId: string, locked: boolean) {
+    setMessage(locked ? t.admin.debugLocking : t.admin.debugUnlocking);
+    const response = await fetch(`/api/admin/matches/${matchId}/debug-lock`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ locked }),
+    });
+    const result = (await response.json()) as { error?: string };
+    setMessage(response.ok ? (locked ? t.admin.debugLocked : t.admin.debugUnlocked) : result.error || "Lock update failed");
+    if (response.ok) router.refresh();
   }
 
   async function saveRules() {
@@ -142,10 +156,13 @@ export function AdminPanel({
                 {match.match_number ? ` · #${match.match_number}` : ""}
               </p>
               <p className="mt-1 text-xs text-slate-500">{formatKickoff(match.kickoff_at, appLocale)}</p>
+              {match.status === "in_progress" ? (
+                <p className="mt-1 text-xs font-black text-amber-700">{t.admin.debugLockedStatus}</p>
+              ) : null}
               <p className="mt-2 text-start font-black">
                 {match.team1_name} vs {match.team2_name}
               </p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto]">
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto_auto_auto]">
                 <input
                   name="homeScore"
                   type="number"
@@ -173,6 +190,18 @@ export function AdminPanel({
                   className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 py-2 font-bold text-slate-700"
                 >
                   {t.admin.reset}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDebugLock(match.id, match.status !== "in_progress")}
+                  disabled={match.status === "final"}
+                  className="min-h-12 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 font-bold text-amber-900"
+                >
+                  {match.status === "final"
+                    ? t.admin.debugFinalLocked
+                    : match.status === "in_progress"
+                      ? t.admin.debugUnlockMatch
+                      : t.admin.debugLockMatch}
                 </button>
               </div>
             </form>

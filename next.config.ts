@@ -9,6 +9,7 @@ const isDev = process.env.NODE_ENV === "development";
 const nextConfig: NextConfig = {
   /** New hash on each build — busts cached JS/CSS in production */
   generateBuildId: async () => process.env.BUILD_ID || `wc26-${Date.now()}`,
+  allowedDevOrigins: ["172.20.10.2"],
   ...(isDev
     ? {
         headers: async () => [
@@ -38,7 +39,7 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "flagcdn.com",
-        pathname: "/w40/**",
+        pathname: "/w80/**",
       },
     ],
   },

@@ -45,6 +45,25 @@ export async function PUT(request: NextRequest) {
     };
   });
 
+  const matchIds = [...new Set(rows.map((row) => row.match_id))];
+  const { data: lockedMatches, error: lockError } = await supabase
+    .from("matches")
+    .select("id,kickoff_at,status")
+    .in("id", matchIds);
+
+  if (lockError) {
+    return NextResponse.json({ error: lockError.message }, { status: 400 });
+  }
+
+  const now = Date.now();
+  const locked = (lockedMatches || []).some(
+    (match) => match.status !== "scheduled" || new Date(match.kickoff_at as string).getTime() <= now
+  );
+
+  if (locked) {
+    return NextResponse.json({ error: "One or more matches are locked" }, { status: 423 });
+  }
+
   const { error } = await supabase.from("match_bets").upsert(rows, { onConflict: "user_id,match_id" });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

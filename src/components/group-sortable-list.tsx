@@ -18,11 +18,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  GroupStandingStatsHeader,
   GroupTeamRowContent,
   groupRowClassName,
 } from "@/components/group-team-row";
-import { cn } from "@/lib/ui";
 import type { Team } from "@/lib/types";
 
 function dndContextId(groupCode: string) {
@@ -122,7 +120,6 @@ export function GroupSortableList({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <GroupStandingStatsHeader betSide />
       <SortableContext items={order} strategy={verticalListSortingStrategy}>
         <ol className="space-y-2">
           {orderedTeams.map((team, index) => (

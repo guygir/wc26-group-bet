@@ -1,8 +1,50 @@
 import { fetchOpenFootballFixtures, isGroupStageMatch, kickoffIso, sourceKeyForMatch } from "@/lib/fixtures";
-import type { OpenFootballPayload } from "@/lib/types";
+import type { OpenFootballMatch, OpenFootballPayload } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type SupabaseAdmin = SupabaseClient;
+const MIN_FINAL_SCORE_AGE_MS = 3 * 60 * 60 * 1000;
+type ExistingMatchSyncState = {
+  status: "scheduled" | "in_progress" | "final";
+  homeScore: number | null;
+  awayScore: number | null;
+};
+
+export function openFootballScoreIsSafeFinal(
+  match: Pick<OpenFootballMatch, "date" | "time" | "score" | "status">,
+  now = new Date()
+) {
+  if (!match.score?.ft) return false;
+
+  const status = match.status?.toLowerCase();
+  if (status && ["final", "fulltime", "full-time", "ft", "finished", "complete", "completed"].includes(status)) {
+    return true;
+  }
+
+  return now.getTime() - new Date(kickoffIso(match.date, match.time)).getTime() >= MIN_FINAL_SCORE_AGE_MS;
+}
+
+export function resolveSyncedMatchScore(
+  match: Pick<OpenFootballMatch, "date" | "time" | "score" | "status">,
+  existing?: ExistingMatchSyncState,
+  now = new Date()
+) {
+  const score = openFootballScoreIsSafeFinal(match, now) ? match.score?.ft : undefined;
+  const existingHasScore = existing && existing.homeScore !== null && existing.awayScore !== null;
+  const status = score
+    ? ("final" as const)
+    : existingHasScore
+      ? existing.status
+      : existing?.status === "in_progress"
+        ? ("in_progress" as const)
+        : ("scheduled" as const);
+
+  return {
+    status,
+    homeScore: score ? score[0] : existing?.homeScore ?? null,
+    awayScore: score ? score[1] : existing?.awayScore ?? null,
+  };
+}
 
 export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootballPayload) {
   const data = payload || (await fetchOpenFootballFixtures());
@@ -23,11 +65,31 @@ export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootb
   if (teamsError) throw teamsError;
 
   const teamIds = new Map((teams || []).map((team) => [team.name, team.id]));
+  const sourceKeys = groupMatches.map((match, index) => sourceKeyForMatch(match, index));
+  const { data: existingMatches, error: existingMatchesError } = await admin
+    .from("matches")
+    .select("source_key,status,home_score,away_score")
+    .in("source_key", sourceKeys);
+  if (existingMatchesError) throw existingMatchesError;
+
+  const existingBySourceKey = new Map(
+    (existingMatches || []).map((match) => [
+      match.source_key as string,
+      {
+        status: match.status as "scheduled" | "in_progress" | "final",
+        homeScore: match.home_score as number | null,
+        awayScore: match.away_score as number | null,
+      },
+    ])
+  );
+
   const matchRows = groupMatches.map((match, index) => {
-    const score = match.score?.ft;
+    const sourceKey = sourceKeys[index];
+    const existing = existingBySourceKey.get(sourceKey);
+    const resolved = resolveSyncedMatchScore(match, existing);
 
     return {
-      source_key: sourceKeyForMatch(match, index),
+      source_key: sourceKey,
       match_number: match.num || null,
       round: match.round,
       group_code: match.group,
@@ -37,9 +99,9 @@ export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootb
       team2_name: match.team2,
       kickoff_at: kickoffIso(match.date, match.time),
       venue: match.ground || null,
-      status: score ? ("final" as const) : ("scheduled" as const),
-      home_score: score ? score[0] : null,
-      away_score: score ? score[1] : null,
+      status: resolved.status,
+      home_score: resolved.homeScore,
+      away_score: resolved.awayScore,
       source_payload: match,
       synced_at: new Date().toISOString(),
     };

@@ -106,6 +106,8 @@ export function MatchBetsForm({
         }
       />
 
+      <ScoringRulesPanel variant="match" />
+
       {message ? (
         <p className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white" role="status">
           {message}
@@ -114,13 +116,16 @@ export function MatchBetsForm({
 
       <div className="match-cards-grid">
         {matches.map((match) => {
-          const locked = now !== null && new Date(match.kickoff_at).getTime() <= now;
+          const locked = match.status !== "scheduled" || (now !== null && new Date(match.kickoff_at).getTime() <= now);
           const value = values.get(match.id) || { homeScore: "", awayScore: "" };
           const finished = matchHasFinalScore(match);
           const earned = userScores[match.id];
 
           return (
-            <article key={match.id} className={`match-cards-grid__card ${styles.matchCard}`}>
+            <article
+              key={match.id}
+              className={`match-cards-grid__card ${styles.matchCard} ${locked ? styles.lockedCard : ""}`}
+            >
               <div className="flex flex-wrap items-center justify-center gap-2 text-center">
                 <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-800">
                   {match.group_code}
@@ -132,7 +137,7 @@ export function MatchBetsForm({
                 <LockCountdown kickoffAt={match.kickoff_at} locked={locked} />
               </div>
 
-              <div className={styles.betBox}>
+              <div className={`${styles.betBox} ${locked ? styles.lockedBetBox : ""}`}>
                 <p className={styles.boxLabel}>{t.matches.yourPrediction}</p>
                 <div className={styles.matchGrid}>
                   <div className={`${styles.cell} ${styles.homeCol}`} style={{ gridRow: 1 }}>
@@ -212,7 +217,6 @@ export function MatchBetsForm({
         })}
       </div>
 
-      <ScoringRulesPanel variant="match" />
     </div>
   );
 }

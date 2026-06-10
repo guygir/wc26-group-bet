@@ -26,6 +26,7 @@ export type OpenFootballMatch = {
   score?: {
     ft?: [number, number];
   };
+  status?: string;
 };
 
 export type OpenFootballPayload = {
