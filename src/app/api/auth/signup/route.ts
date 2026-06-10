@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createServerSupabaseClient();
-    const domain = process.env.AUTH_EMAIL_DOMAIN || "wc26.local";
+    const domain = process.env.AUTH_EMAIL_DOMAIN || "wc26.example.com";
     const authEmail = `${slugify(nickname)}_${shortId()}@${domain}`;
     const { error } = await supabase.auth.signUp({
       email: authEmail,
