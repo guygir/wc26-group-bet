@@ -33,7 +33,6 @@ export function SiteShell({ children, profile }: SiteShellProps) {
           className="object-cover opacity-[0.2]"
           sizes="100vw"
         />
-        <div className="absolute inset-0 bg-emerald-50/45" />
         <Image
           src="/brand/battalion-240-emblem-sharp-v2.png"
           alt=""
