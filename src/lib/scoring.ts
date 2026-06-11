@@ -115,6 +115,7 @@ export function scoreGroupStandingBet(
   return scoreGroupStandingBetDetailed(predictedTeamIds, actualTeamIds, rules).total;
 }
 
-export function matchHasFinalScore(match: Pick<Match, "home_score" | "away_score">) {
-  return match.home_score !== null && match.away_score !== null;
+export function matchHasFinalScore(match: Pick<Match, "home_score" | "away_score"> & Partial<Pick<Match, "status">>) {
+  const hasScore = match.home_score !== null && match.away_score !== null;
+  return match.status ? match.status === "final" && hasScore : hasScore;
 }

@@ -1,5 +1,6 @@
 import { fetchOpenFootballFixtures, isGroupStageMatch, kickoffIso, sourceKeyForMatch } from "@/lib/fixtures";
 import type { OpenFootballMatch, OpenFootballPayload } from "@/lib/types";
+import { fetchWorldCup26LiveScores, type WorldCup26LiveScore, worldCup26ScoreKey } from "@/lib/worldcup26-live";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type SupabaseAdmin = SupabaseClient;
@@ -30,9 +31,21 @@ export function resolveSyncedMatchScore(
   now = new Date()
 ) {
   const score = openFootballScoreIsSafeFinal(match, now) ? match.score?.ft : undefined;
+  const liveScore =
+    !score && match.status?.toLowerCase() === "in_progress" && match.score?.ft ? match.score.ft : undefined;
   const existingHasScore = existing && existing.homeScore !== null && existing.awayScore !== null;
+  if (!score && existing?.status === "final" && existingHasScore) {
+    return {
+      status: existing.status,
+      homeScore: existing.homeScore,
+      awayScore: existing.awayScore,
+    };
+  }
+
   const status = score
     ? ("final" as const)
+    : liveScore
+      ? ("in_progress" as const)
     : existingHasScore
       ? existing.status
       : existing?.status === "in_progress"
@@ -41,14 +54,20 @@ export function resolveSyncedMatchScore(
 
   return {
     status,
-    homeScore: score ? score[0] : existing?.homeScore ?? null,
-    awayScore: score ? score[1] : existing?.awayScore ?? null,
+    homeScore: score ? score[0] : liveScore ? liveScore[0] : existing?.homeScore ?? null,
+    awayScore: score ? score[1] : liveScore ? liveScore[1] : existing?.awayScore ?? null,
   };
 }
 
 export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootballPayload) {
   const data = payload || (await fetchOpenFootballFixtures());
   const groupMatches = data.matches.filter(isGroupStageMatch);
+  const fallbackScores: Map<string, WorldCup26LiveScore> = payload
+    ? new Map<string, WorldCup26LiveScore>()
+    : await fetchWorldCup26LiveScores().catch((error) => {
+        console.warn("WorldCup26 fallback sync failed", error);
+        return new Map<string, WorldCup26LiveScore>();
+      });
 
   const teamRows = groupMatches.flatMap((match) => [
     { name: match.team1, group_code: match.group },
@@ -86,7 +105,16 @@ export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootb
   const matchRows = groupMatches.map((match, index) => {
     const sourceKey = sourceKeys[index];
     const existing = existingBySourceKey.get(sourceKey);
-    const resolved = resolveSyncedMatchScore(match, existing);
+    const fallbackScore = fallbackScores.get(worldCup26ScoreKey(match.group!, match.team1, match.team2));
+    const matchForScoring =
+      !match.score?.ft && fallbackScore
+        ? {
+            ...match,
+            score: { ft: [fallbackScore.homeScore, fallbackScore.awayScore] as [number, number] },
+            status: fallbackScore.status,
+          }
+        : match;
+    const resolved = resolveSyncedMatchScore(matchForScoring, existing);
 
     return {
       source_key: sourceKey,
@@ -102,7 +130,7 @@ export async function syncOpenFootball(admin: SupabaseAdmin, payload?: OpenFootb
       status: resolved.status,
       home_score: resolved.homeScore,
       away_score: resolved.awayScore,
-      source_payload: match,
+      source_payload: matchForScoring,
       synced_at: new Date().toISOString(),
     };
   });

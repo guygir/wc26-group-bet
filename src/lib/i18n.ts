@@ -59,6 +59,7 @@ const dictionaries = {
       locked: "Locked",
       open: "Open",
       final: "Final",
+      liveScore: "Live score",
       saved: "match bets saved",
       empty: "No fixtures yet",
       emptyBody: "Ask an admin to sync OpenFootball fixtures from the admin page.",
@@ -72,6 +73,7 @@ const dictionaries = {
       hideLeaders: "Hide top scorers",
       pointsEarned: "Points",
       noLeaders: "No points yet",
+      exactHitters: "Exact hits:",
     },
     groups: {
       title: "Group standings bets",
@@ -244,6 +246,7 @@ const dictionaries = {
       locked: "נעול",
       open: "פתוח",
       final: "סופי",
+      liveScore: "תוצאה חיה",
       saved: "הימורי משחקים נשמרו",
       empty: "אין משחקים עדיין",
       emptyBody: "בקשו ממנהל לסנכרן את משחקי OpenFootball מעמוד הניהול.",
@@ -257,6 +260,7 @@ const dictionaries = {
       hideLeaders: "הסתר מובילים",
       pointsEarned: "נקודות",
       noLeaders: "אין נקודות עדיין",
+      exactHitters: "פגעו במדויק:",
     },
     groups: {
       title: "הימורי דירוג בתים",

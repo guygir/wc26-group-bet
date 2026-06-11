@@ -25,16 +25,28 @@ type UserScore = {
   reasons: ScoreReason[];
 };
 
+type LiveScore = {
+  homeScore: number;
+  awayScore: number;
+  status: "in_progress" | "final";
+};
+
 const FLAG_SIZE = 56;
+
+function liveScoreKey(groupCode: string, team1: string, team2: string) {
+  return `${groupCode}::${team1.trim().toLowerCase()}::${team2.trim().toLowerCase()}`;
+}
 
 export function MatchBetsForm({
   matches,
   bets,
   userScores,
+  liveScores,
 }: {
   matches: Match[];
   bets: ExistingBet[];
   userScores: Record<string, UserScore>;
+  liveScores: Record<string, LiveScore>;
 }) {
   const router = useRouter();
   const initial = useMemo(() => {
@@ -49,6 +61,7 @@ export function MatchBetsForm({
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState<number | null>(null);
+  const [feedScores, setFeedScores] = useState(liveScores);
 
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -56,6 +69,27 @@ export function MatchBetsForm({
     const id = window.setInterval(tick, 1000);
     return () => {
       window.clearTimeout(startId);
+      window.clearInterval(id);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshLiveScores() {
+      const response = await fetch("/api/matches/live-scores");
+      const payload = (await response.json()) as { scores?: Record<string, LiveScore> };
+      if (!cancelled) {
+        setFeedScores(payload.scores || {});
+      }
+    }
+
+    const id = window.setInterval(() => {
+      refreshLiveScores().catch(() => undefined);
+    }, 30_000);
+
+    return () => {
+      cancelled = true;
       window.clearInterval(id);
     };
   }, []);
@@ -118,7 +152,16 @@ export function MatchBetsForm({
         {matches.map((match) => {
           const locked = match.status !== "scheduled" || (now !== null && new Date(match.kickoff_at).getTime() <= now);
           const value = values.get(match.id) || { homeScore: "", awayScore: "" };
-          const finished = matchHasFinalScore(match);
+          const scoreFinal = matchHasFinalScore(match);
+          const persistedScore =
+            match.home_score !== null && match.away_score !== null
+              ? { homeScore: match.home_score, awayScore: match.away_score, status: match.status }
+              : null;
+          const feedScore = match.group_code
+            ? feedScores[liveScoreKey(match.group_code, match.team1_name, match.team2_name)]
+            : undefined;
+          const displayScore = persistedScore || feedScore;
+          const displayFinal = scoreFinal || displayScore?.status === "final";
           const earned = userScores[match.id];
 
           return (
@@ -184,32 +227,36 @@ export function MatchBetsForm({
                 </div>
               </div>
 
-              {finished ? (
+              {displayScore ? (
                 <div className={styles.finishedSections}>
                   <div className={styles.finalBox}>
-                    <p className={styles.boxLabel}>{t.matches.final}</p>
+                    <p className={styles.boxLabel}>{displayFinal ? t.matches.final : t.matches.liveScore}</p>
                     <div className={styles.finalGrid}>
                       <div className={`${styles.cell} ${styles.homeCol}`}>
-                        <p className={styles.finalValue}>{match.home_score}</p>
+                        <p className={styles.finalValue}>{displayScore.homeScore}</p>
                       </div>
                       <span className={styles.sep}>:</span>
                       <div className={`${styles.cell} ${styles.awayCol}`}>
-                        <p className={styles.finalValue}>{match.away_score}</p>
+                        <p className={styles.finalValue}>{displayScore.awayScore}</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className={styles.pointsBox}>
-                    <p className={styles.boxLabel}>{t.matches.yourPoints}</p>
-                    <p className={styles.pointsValue}>{earned?.points ?? 0}</p>
-                    {earned?.reasons.length ? (
-                      <p className={styles.pointsReasons}>{formatReasons(earned.reasons)}</p>
-                    ) : null}
-                  </div>
+                  {scoreFinal ? (
+                    <div className={styles.pointsBox}>
+                      <p className={styles.boxLabel}>{t.matches.yourPoints}</p>
+                      <p className={styles.pointsValue}>{earned?.points ?? 0}</p>
+                      {earned?.reasons.length ? (
+                        <p className={styles.pointsReasons}>{formatReasons(earned.reasons)}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
-                  <div className={styles.leadersBox}>
-                    <MatchPointsLeaders matchId={match.id} />
-                  </div>
+                  {scoreFinal ? (
+                    <div className={styles.leadersBox}>
+                      <MatchPointsLeaders matchId={match.id} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </article>

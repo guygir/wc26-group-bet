@@ -9,6 +9,7 @@ import { scoreMatchBetDetailed, matchHasFinalScore } from "@/lib/scoring";
 import { pickScoringRules, SCORING_RULES_SELECT } from "@/lib/scoring-rules";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { fetchWorldCup26LiveScores, type WorldCup26LiveScore } from "@/lib/worldcup26-live";
 import type { Match, ScoreReason } from "@/lib/types";
 
 export default async function MatchesPage() {
@@ -54,6 +55,8 @@ export default async function MatchesPage() {
 
   const matchList = (matches || []) as Match[];
   const betList = bets || [];
+  const liveScores = await fetchWorldCup26LiveScores().catch(() => new Map<string, WorldCup26LiveScore>());
+  const liveScoresByMatch = Object.fromEntries(liveScores);
   const missingFinalScores = betList.some((bet) => {
     const match = matchList.find((row) => row.id === bet.match_id);
     return match && matchHasFinalScore(match) && !scoreByMatch.has(bet.match_id);
@@ -84,6 +87,7 @@ export default async function MatchesPage() {
           matches={matchList}
           bets={bets || []}
           userScores={Object.fromEntries(scoreByMatch)}
+          liveScores={liveScoresByMatch}
         />
       ) : (
         <Card className="p-8">

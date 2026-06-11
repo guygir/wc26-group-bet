@@ -14,7 +14,8 @@ export type GroupStandingRow = {
   points: number;
 };
 
-type ScoredMatch = Pick<Match, "team1_id" | "team2_id" | "home_score" | "away_score">;
+type ScoredMatch = Pick<Match, "team1_id" | "team2_id" | "home_score" | "away_score"> &
+  Partial<Pick<Match, "status">>;
 
 function emptyRow(teamId: string): GroupStandingRow {
   return {
@@ -36,7 +37,8 @@ function finishedMatches(matches: ScoredMatch[]) {
       match.team1_id &&
       match.team2_id &&
       match.home_score !== null &&
-      match.away_score !== null
+      match.away_score !== null &&
+      (!match.status || match.status === "final")
   ) as (ScoredMatch & { team1_id: string; team2_id: string; home_score: number; away_score: number })[];
 }
 

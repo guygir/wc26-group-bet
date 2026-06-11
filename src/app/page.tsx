@@ -22,6 +22,7 @@ export default async function Home() {
         .from("matches")
         .select("id", { count: "exact", head: true })
         .not("group_code", "is", null)
+        .eq("status", "final")
         .not("home_score", "is", null)
         .not("away_score", "is", null),
       admin.from("profiles").select("user_id", { count: "exact", head: true }),
