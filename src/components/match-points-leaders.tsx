@@ -9,6 +9,7 @@ type ExactHitter = {
   points: number;
   nickname: string;
   avatarUrl: string | null;
+  streak: number;
 };
 
 export function MatchPointsLeaders({ matchId }: { matchId: string }) {
@@ -46,9 +47,16 @@ export function MatchPointsLeaders({ matchId }: { matchId: string }) {
           {exactHitters.map((hitter) => (
             <span
               key={hitter.userId}
-              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 py-1 pl-2 pr-1 text-xs font-black text-emerald-950 ring-1 ring-emerald-100"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 py-1 pl-2 pr-1 text-xs font-black text-emerald-950 ring-1 ring-emerald-100"
             >
-              <span className="max-w-24 truncate">{hitter.nickname}</span>
+              <span className="min-w-0 text-start">
+                <span className="block max-w-24 truncate">{hitter.nickname}</span>
+                {hitter.streak > 1 ? (
+                  <span className="block max-w-24 truncate text-[0.65rem] leading-4 text-orange-700">
+                    🔥 {hitter.streak} ברצף
+                  </span>
+                ) : null}
+              </span>
               <UserAvatar url={hitter.avatarUrl} name={hitter.nickname} size="md" className="ring-2 ring-emerald-200" />
             </span>
           ))}

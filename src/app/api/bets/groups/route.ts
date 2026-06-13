@@ -37,7 +37,37 @@ export async function PUT(request: NextRequest) {
     };
   });
 
-  const { error } = await supabase.from("group_standing_bets").upsert(rows, {
+  const admin = createAdminClient();
+  const groupCodes = [...new Set(rows.map((row) => row.group_code))];
+  const { data: matches, error: matchesError } = await admin
+    .from("matches")
+    .select("group_code,kickoff_at")
+    .in("group_code", groupCodes);
+
+  if (matchesError) {
+    return NextResponse.json({ error: matchesError.message }, { status: 400 });
+  }
+
+  const firstKickoffs = new Map<string, number>();
+  for (const match of matches || []) {
+    const time = new Date(match.kickoff_at as string).getTime();
+    const current = firstKickoffs.get(match.group_code as string);
+    if (Number.isFinite(time) && (current === undefined || time < current)) {
+      firstKickoffs.set(match.group_code as string, time);
+    }
+  }
+
+  const now = Date.now();
+  const lockedGroup = groupCodes.some((groupCode) => {
+    const firstKickoff = firstKickoffs.get(groupCode);
+    return firstKickoff !== undefined && firstKickoff <= now;
+  });
+
+  if (lockedGroup) {
+    return NextResponse.json({ error: "One or more groups are locked" }, { status: 423 });
+  }
+
+  const { error } = await admin.from("group_standing_bets").upsert(rows, {
     onConflict: "user_id,group_code",
   });
 
@@ -45,7 +75,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
-  const admin = createAdminClient();
   const scoring = await recomputeAllScores(admin);
   revalidateLivePages();
 

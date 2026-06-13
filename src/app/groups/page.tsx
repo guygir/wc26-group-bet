@@ -86,7 +86,11 @@ export default async function GroupsPage() {
 
   const firstKickoffs: Record<string, string> = {};
   for (const match of matches || []) {
-    if (match.group_code && !firstKickoffs[match.group_code]) {
+    if (
+      match.group_code &&
+      (!firstKickoffs[match.group_code] ||
+        new Date(match.kickoff_at).getTime() < new Date(firstKickoffs[match.group_code]).getTime())
+    ) {
       firstKickoffs[match.group_code] = match.kickoff_at;
     }
   }

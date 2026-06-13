@@ -63,11 +63,6 @@ export function GroupBetsForm({
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState<number | null>(null);
 
-  const earliestKickoff = useMemo(() => {
-    const times = Object.values(firstKickoffs).map((iso) => new Date(iso).getTime()).filter(Number.isFinite);
-    return times.length ? Math.min(...times) : null;
-  }, [firstKickoffs]);
-
   useEffect(() => {
     const tick = () => setNow(Date.now());
     const startId = window.setTimeout(tick, 0);
@@ -78,12 +73,22 @@ export function GroupBetsForm({
     };
   }, []);
 
-  const globalLocked = earliestKickoff !== null && now !== null && earliestKickoff <= now;
-
   async function save() {
     setSaving(true);
     setMessage(null);
-    const payload = [...orders.entries()].map(([groupCode, orderedTeamIds]) => ({ groupCode, orderedTeamIds }));
+    const payload = [...orders.entries()]
+      .filter(([groupCode]) => {
+        const kickoff = firstKickoffs[groupCode];
+        return !kickoff || now === null || new Date(kickoff).getTime() > now;
+      })
+      .map(([groupCode, orderedTeamIds]) => ({ groupCode, orderedTeamIds }));
+
+    if (!payload.length) {
+      setSaving(false);
+      setMessage(t.groups.allLocked);
+      return;
+    }
+
     const response = await fetch("/api/bets/groups", {
       method: "PUT",
       headers: { "content-type": "application/json" },
@@ -93,9 +98,6 @@ export function GroupBetsForm({
     setSaving(false);
     setMessage(response.ok ? `${result.saved || 0} ${t.groups.saved}` : result.error || "Could not save groups");
   }
-
-  const globalCountdown =
-    earliestKickoff && now !== null && !globalLocked ? formatCountdown(earliestKickoff - now, appLocale) : null;
 
   return (
     <div className="space-y-5">
@@ -111,13 +113,9 @@ export function GroupBetsForm({
 
       <ScoringRulesPanel variant="group" />
 
-      {earliestKickoff ? (
+      {Object.keys(firstKickoffs).length ? (
         <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-800">
-          {globalLocked
-            ? t.matches.locked
-            : globalCountdown
-              ? `${t.groups.locksIn} ${globalCountdown}`
-              : t.matches.open}
+          {t.groups.lockPerGroup}
         </p>
       ) : null}
 
@@ -133,6 +131,8 @@ export function GroupBetsForm({
           if (!teams?.length) return null;
 
           const locked = now !== null && new Date(firstKickoffs[group]).getTime() <= now;
+          const countdown =
+            now !== null && !locked ? formatCountdown(new Date(firstKickoffs[group]).getTime() - now, appLocale) : null;
           const order = orders.get(group) || teams.map((team) => team.id);
           const liveOrder = liveOrderByGroup[group] || teams.map((team) => team.id);
           const hasOverride = overrideGroups.includes(group);
@@ -147,6 +147,11 @@ export function GroupBetsForm({
                 <h2 className="text-xl font-black text-slate-900">{group}</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   <StatusPill locked={locked} labels={{ locked: t.groups.locked, open: t.groups.open }} />
+                  {countdown ? (
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">
+                      {t.groups.locksIn} {countdown}
+                    </span>
+                  ) : null}
                   {hasOverride ? (
                     <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-bold text-amber-900">
                       {t.groups.adminOverride}
